@@ -51,4 +51,11 @@ endif()
 
 add_executable(WebcamTest CameraNameTest.cpp webcam.cpp)
 
-target_link_libraries(WebcamTest MFplat.lib MF.lib Mfreadwrite.lib)
+target_link_libraries(WebcamTest MFplat.lib MF.lib Mfreadwrite.lib Mfuuid.lib)
+
+
+# ----------------- Webcam ask -----------------
+
+add_executable(Webcamask testcam.cpp)
+
+target_link_libraries(Webcamask MFplat.lib MF.lib Mfreadwrite.lib Mfuuid.lib)

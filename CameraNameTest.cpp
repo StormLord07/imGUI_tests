@@ -5,7 +5,8 @@
 
 int main() {
     HRESULT hr = MFStartup(MF_VERSION);
-    WebcamManager camera_manager;
+    error(hr, L"Failed to start Media Foundation.");
+    WebcamManager camera_manager{};
     auto device_names = camera_manager.getDeviceNames();
 
     if (device_names.empty()) {
@@ -17,12 +18,9 @@ int main() {
             std::wcout << L"- " << name << std::endl;
         }
         auto cam = camera_manager[0];
-        std::wcout << L"Picked camera: " << cam.getName() << std::endl;
+        // std::wcout << L"Picked camera: " << cam.getName() << std::endl;
+        cam.activate();
     }
-
-
-
-    // auto frame = cam.get_frame(0);
 
     hr = MFShutdown();
 

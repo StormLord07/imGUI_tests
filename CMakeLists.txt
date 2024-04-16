@@ -49,7 +49,7 @@ endif()
 
 # ----------------- Webcam Test -----------------
 
-add_executable(WebcamTest CameraNameTest.cpp webcam.cpp)
+add_executable(WebcamTest CameraNameTest.cpp webcam.cpp webcam_manager.cpp)
 
 target_link_libraries(WebcamTest MFplat.lib MF.lib Mfreadwrite.lib Mfuuid.lib)
 

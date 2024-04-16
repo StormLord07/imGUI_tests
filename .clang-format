@@ -1,0 +1,19 @@
+---
+Language:        Cpp
+BasedOnStyle:  LLVM
+
+# Use spaces instead of tabs
+UseTab:          Never
+TabWidth:        4
+IndentWidth:     4
+
+# Aligns consecutive declarations
+AlignConsecutiveDeclarations: true
+AlignConsecutiveAssignments: true
+AlignConsecutiveMacros: true
+
+# Pointer and reference alignment
+PointerAlignment: Left
+
+# Additional options can be set to further customize formatting
+...

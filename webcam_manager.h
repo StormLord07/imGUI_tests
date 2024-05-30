@@ -15,6 +15,10 @@ class WebcamManager {
     Webcam&       operator[](std::size_t index);
     const Webcam& operator[](std::size_t index) const;
 
+    void cloneDevice(std::size_t index);
+
+    void cloneDevice(std::wstring name);
+
     /**
      * @brief Updates the list of connected cameras
      *

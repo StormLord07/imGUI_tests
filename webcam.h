@@ -1,8 +1,10 @@
 #ifndef WEBCAM_H
 #define WEBCAM_H
 
+#include "GUID_tools.h"
 #include <algorithm>
 #include <comdef.h>
+#include <fstream>
 #include <iostream>
 #include <mfapi.h>
 #include <mferror.h>
@@ -28,6 +30,7 @@ class Webcam {
     bool         active_{false};
 
   public:
+    Webcam() = default;
     Webcam(IMFActivate* device, IMFAttributes* config = nullptr);
     Webcam(const Webcam& other);
     ~Webcam();
@@ -38,11 +41,18 @@ class Webcam {
     IMFActivate* getDevice() const;
     std::wstring getName() const;
 
-    void setMediaTypeInex(uint16_t index);
+    void setMediaTypeIndex(uint16_t index);
+
+    void listMediaTypes();
+    void printMediaType(uint64_t index);
+    void printSelectedMediaType();
 
     int16_t activate();
     int16_t activate(uint16_t index);
     int16_t deactivate();
+
+    void saveFrameAsJPEG(IMFSample* sample, const std::wstring& filePath);
+    void saveFrame(const std::wstring& filePath);
 };
 
 #endif // WEBCAM_H

@@ -15,7 +15,10 @@ set(SOURCES
     ${IMGUI_PATH}/imgui_tables.cpp
     ${IMGUI_PATH}/imgui_widgets.cpp
     ${IMGUI_PATH}/backends/imgui_impl_dx12.cpp
-    ${IMGUI_PATH}/backends/imgui_impl_win32.cpp)
+    ${IMGUI_PATH}/backends/imgui_impl_win32.cpp
+    webcam_manager.cpp
+    webcam.cpp 
+    GUID_tools.cpp)
 
 # Add executable
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -25,7 +28,7 @@ include_directories(${IMGUI_PATH})
 include_directories(${IMGUI_PATH}/backends)
 
 # Link against DirectX 12 libraries
-target_link_libraries(${PROJECT_NAME} d3d12 dxgi)
+target_link_libraries(${PROJECT_NAME} d3d12 dxgi MFplat.lib MF.lib Mfreadwrite.lib Mfuuid.lib)
 
 # Define preprocessor directives for enabling the debug layer in debug builds
 target_compile_definitions(${PROJECT_NAME} PRIVATE "$<$<CONFIG:DEBUG>:DX12_ENABLE_DEBUG_LAYER>")
@@ -49,7 +52,7 @@ endif()
 
 # ----------------- Webcam Test -----------------
 
-add_executable(WebcamTest CameraNameTest.cpp webcam.cpp webcam_manager.cpp)
+add_executable(WebcamTest CameraNameTest.cpp webcam.cpp GUID_tools.cpp webcam_manager.cpp)
 
 target_link_libraries(WebcamTest MFplat.lib MF.lib Mfreadwrite.lib Mfuuid.lib)
 

@@ -6,7 +6,6 @@
 #include <mfidl.h>
 #include <mfreadwrite.h>
 
-
 // Utility function to check HRESULT and handle errors
 void CHK(HRESULT hr) {
     if (FAILED(hr)) {
@@ -90,7 +89,8 @@ std::wstring GetGuidName(const GUID& guid) {
         {MFAudioFormat_WMAudio_Lossless, L"WMAudio Lossless"},
         {MFAudioFormat_WMASPDIF, L"WMASPDIF"},
         {MFAudioFormat_MP3, L"MP3"},
-        {MFAudioFormat_MPEG, L"MPEG"}};
+        {MFAudioFormat_MPEG, L"MPEG"},
+        {MFVideoFormat_MJPG, L"MJPG"}};
 
     auto it = guidMap.find(guid);
     if (it != guidMap.end()) {
@@ -103,7 +103,7 @@ std::wstring GetGuidName(const GUID& guid) {
 // Function to print media type details in a more readable format
 void PrintMediaType(IMFMediaType* pType) {
     GUID   majorType = {};
-    GUID   subType = {};
+    GUID   subType   = {};
     UINT32 width = 0, height = 0;
     UINT32 numerator = 0, denominator = 0;
 
@@ -120,10 +120,10 @@ void PrintMediaType(IMFMediaType* pType) {
 }
 
 int main() {
-    HRESULT        hr = S_OK;
+    HRESULT        hr          = S_OK;
     IMFAttributes* pAttributes = nullptr;
-    IMFActivate**  ppDevices = nullptr;
-    UINT32         count = 0;
+    IMFActivate**  ppDevices   = nullptr;
+    UINT32         count       = 0;
 
     CHK(MFStartup(MF_VERSION));
 
@@ -157,7 +157,7 @@ int main() {
 
             // List all media types (formats)
             IMFMediaType* pMediaType = nullptr;
-            DWORD         mIndex = 0;
+            DWORD         mIndex     = 0;
             while (SUCCEEDED(pReader->GetNativeMediaType(
                 (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM, mIndex,
                 &pMediaType))) {

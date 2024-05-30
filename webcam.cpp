@@ -216,8 +216,74 @@ IMFActivate* Webcam::getDevice() const {
 
 std::wstring Webcam::getName() const { return this->name_; }
 
-void Webcam::setMediaTypeInex(uint16_t index) {
+void Webcam::setMediaTypeIndex(uint16_t index) {
     this->chosen_media_type_index_ = index;
+}
+
+void Webcam::listMediaTypes() {
+    GUID   majorType = {};
+    GUID   subType   = {};
+    UINT32 width = 0, height = 0;
+    UINT32 numerator = 0, denominator = 0;
+
+    for (auto media_type : this->media_types_) {
+        media_type->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
+        media_type->GetGUID(MF_MT_SUBTYPE, &subType);
+        MFGetAttributeSize(media_type, MF_MT_FRAME_SIZE, &width, &height);
+        MFGetAttributeRatio(media_type, MF_MT_FRAME_RATE, &numerator,
+                            &denominator);
+
+        std::wcout << L"Major Type: " << getGuidName(majorType) << "\n"
+                   << L"Sub Type: " << getGuidName(subType) << "\n"
+                   << L"Resolution: " << width << L"x" << height << "\n"
+                   << L"Frame Rate: " << numerator << L"/" << denominator
+                   << std::endl;
+    }
+}
+
+void Webcam::printMediaType(uint64_t index) {
+    if (index > this->media_types_.size()) {
+        return;
+    }
+
+    GUID   majorType = {};
+    GUID   subType   = {};
+    UINT32 width = 0, height = 0;
+    UINT32 numerator = 0, denominator = 0;
+
+    IMFMediaType* media_type = this->media_types_[index];
+
+    media_type->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
+    media_type->GetGUID(MF_MT_SUBTYPE, &subType);
+    MFGetAttributeSize(media_type, MF_MT_FRAME_SIZE, &width, &height);
+    MFGetAttributeRatio(media_type, MF_MT_FRAME_RATE, &numerator, &denominator);
+
+    std::wcout << L"Major Type: " << getGuidName(majorType) << "\n"
+               << L"Sub Type: " << getGuidName(subType) << "\n"
+               << L"Resolution: " << width << L"x" << height << "\n"
+               << L"Frame Rate: " << numerator << L"/" << denominator
+               << std::endl;
+}
+
+void Webcam::printSelectedMediaType() {
+    GUID   majorType = {};
+    GUID   subType   = {};
+    UINT32 width = 0, height = 0;
+    UINT32 numerator = 0, denominator = 0;
+
+    IMFMediaType* media_type =
+        this->media_types_[this->chosen_media_type_index_];
+
+    media_type->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
+    media_type->GetGUID(MF_MT_SUBTYPE, &subType);
+    MFGetAttributeSize(media_type, MF_MT_FRAME_SIZE, &width, &height);
+    MFGetAttributeRatio(media_type, MF_MT_FRAME_RATE, &numerator, &denominator);
+
+    std::wcout << L"Major Type: " << getGuidName(majorType) << "\n"
+               << L"Sub Type: " << getGuidName(subType) << "\n"
+               << L"Resolution: " << width << L"x" << height << "\n"
+               << L"Frame Rate: " << numerator << L"/" << denominator
+               << std::endl;
 }
 
 int16_t Webcam::activate() {
@@ -267,7 +333,7 @@ int16_t Webcam::activate(uint16_t index) {
     if (index >= this->media_types_.size()) {
         return -1; // TODO: temporary error code
     }
-    setMediaTypeInex(index);
+    setMediaTypeIndex(index);
     return this->activate();
 }
 
@@ -290,4 +356,65 @@ int16_t Webcam::deactivate() {
     std::wcout << L"Deactivation succesfull " + this->name_ << std::endl;
 
     return 0;
+}
+
+void Webcam::saveFrameAsJPEG(IMFSample* sample, const std::wstring& filePath) {
+    IMFMediaBuffer* buffer    = nullptr;
+    DWORD           maxLength = 0, currentLength = 0;
+    BYTE*           rawBuffer = nullptr;
+
+    // Get the buffer from the sample
+    HRESULT hr = sample->ConvertToContiguousBuffer(&buffer);
+    if (FAILED(hr)) {
+        error(hr, L"ConvertToContiguousBuffer failed");
+        return;
+    }
+
+    // Lock the buffer
+    hr = buffer->Lock(&rawBuffer, &maxLength, &currentLength);
+    if (FAILED(hr)) {
+        error(hr, L"Buffer lock failed");
+        buffer->Release();
+        return;
+    }
+
+    // Write the buffer to file
+    std::ofstream outputFile(filePath, std::ios::out | std::ios::binary);
+
+    std::cout << "outputFile opened" << std::endl;
+    outputFile.write(reinterpret_cast<const char*>(rawBuffer), currentLength);
+    outputFile.close();
+
+    // Unlock the buffer and release it
+    buffer->Unlock();
+    buffer->Release();
+}
+
+void Webcam::saveFrame(const std::wstring& filePath) {
+    if (!this->active_) {
+        std::wcerr << L"Webcam is not active. Cannot capture frame."
+                   << std::endl;
+        return;
+    }
+
+    DWORD      streamIndex, flags;
+    LONGLONG   timestamp;
+    IMFSample* sample = nullptr;
+
+    HRESULT hr = this->source_reader_->ReadSample(
+        MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, &streamIndex, &flags,
+        &timestamp, &sample);
+
+    if (FAILED(hr)) {
+        error(hr, L"ReadSample failed");
+        return;
+    }
+
+    if (sample) {
+        saveFrameAsJPEG(sample, filePath);
+        sample->Release();
+        return;
+    }
+    this->saveFrame(filePath);
+    return;
 }

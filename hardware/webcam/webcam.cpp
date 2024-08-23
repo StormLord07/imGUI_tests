@@ -418,3 +418,21 @@ void Webcam::saveFrame(const std::wstring& filePath) {
     this->saveFrame(filePath);
     return;
 }
+
+HRESULT Webcam::getFrame(IMFSample** sample) {
+    HRESULT  hr = S_OK;
+    DWORD    streamIndex, flags;
+    LONGLONG timestamp;
+
+    hr = source_reader_->ReadSample(MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0,
+                                    &streamIndex, &flags, &timestamp, sample);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
+    if (flags & MF_SOURCE_READERF_STREAMTICK) {
+        return MF_E_END_OF_STREAM;
+    }
+
+    return hr;
+}

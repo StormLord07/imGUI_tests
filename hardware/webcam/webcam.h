@@ -53,6 +53,8 @@ class Webcam {
 
     void saveFrameAsJPEG(IMFSample* sample, const std::wstring& filePath);
     void saveFrame(const std::wstring& filePath);
+
+    HRESULT getFrame(IMFSample** sample);
 };
 
 #endif // WEBCAM_H

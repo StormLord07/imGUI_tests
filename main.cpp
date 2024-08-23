@@ -16,10 +16,8 @@
 #include "imgui.h"
 #include "imgui_impl_dx12.h"
 #include "imgui_impl_win32.h"
-#include "webcam_manager.h"
 #include <d3d12.h>
 #include <dxgi1_4.h>
-#include <sstream>
 #include <tchar.h>
 
 #ifdef _DEBUG
@@ -30,6 +28,10 @@
 #include <dxgidebug.h>
 #pragma comment(lib, "dxguid.lib")
 #endif
+
+#include "imgui_internal.h"
+
+#include "hardware/webcam/webcam_manager.h"
 
 struct FrameContext {
     ID3D12CommandAllocator* CommandAllocator;
@@ -51,6 +53,7 @@ static ID3D12Fence*               g_fence                           = nullptr;
 static HANDLE                     g_fenceEvent                      = nullptr;
 static UINT64                     g_fenceLastSignaledValue          = 0;
 static IDXGISwapChain3*           g_pSwapChain                      = nullptr;
+static bool                       g_SwapChainOccluded               = false;
 static HANDLE                     g_hSwapChainWaitableObject        = nullptr;
 static ID3D12Resource* g_mainRenderTargetResource[NUM_BACK_BUFFERS] = {};
 static D3D12_CPU_DESCRIPTOR_HANDLE
@@ -65,20 +68,8 @@ void           WaitForLastSubmittedFrame();
 FrameContext*  WaitForNextFrameResources();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-std::string wstring_to_string(const std::wstring& wstr) {
-    std::ostringstream oss;
-    for (auto wc : wstr) {
-        oss << static_cast<char>(wc);
-    }
-    return oss.str();
-}
-
 // Main code
 int main(int, char**) {
-    HRESULT hr = S_OK;
-    hr         = CoInitialize(0);
-    hr         = MFStartup(MF_VERSION);
-    error(hr, L"Failed to start Media Foundation.");
     // Create application window
     // ImGui_ImplWin32_EnableDpiAwareness();
     WNDCLASSEXW wc = {sizeof(wc),
@@ -164,29 +155,7 @@ int main(int, char**) {
     ImVec4 clear_color         = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
-    bool                      done               = false;
-    bool                      show_camera_window = false;
-    WebcamManager             camera_manager{};
-    std::vector<std::wstring> device_names_w = camera_manager.getDeviceNames();
-    std::vector<std::string>  device_names_str;
-    std::vector<const char*>  items;
-    static int                item_current_idx = 0;
-    Webcam                    camera{};
-
-    if (camera_manager.getDevices().size()) {
-        camera = camera_manager[item_current_idx];
-    }
-
-    // Convert each std::wstring to std::string and store in device_names_str
-    for (const auto& wname : device_names_w) {
-        device_names_str.push_back(wstring_to_string(wname));
-    }
-
-    // Convert std::vector<std::string> to std::vector<const char*>
-    for (const auto& name : device_names_str) {
-        items.push_back(name.c_str());
-    }
-
+    bool done = false;
     while (!done) {
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the
@@ -200,6 +169,15 @@ int main(int, char**) {
         }
         if (done)
             break;
+
+        // Handle window screen locked
+        if (g_SwapChainOccluded &&
+            g_pSwapChain->Present(0, DXGI_PRESENT_TEST) ==
+                DXGI_STATUS_OCCLUDED) {
+            ::Sleep(10);
+            continue;
+        }
+        g_SwapChainOccluded = false;
 
         // Start the Dear ImGui frame
         ImGui_ImplDX12_NewFrame();
@@ -222,16 +200,11 @@ int main(int, char**) {
                                            // world!" and append into it.
 
             ImGui::Text(
-                "This is some useful text."); // Display some text (you can
-                                              // use a format strings too)
+                "This is some useful text."); // Display some text (you can use
+                                              // a format strings too)
             ImGui::Checkbox("Demo Window",
                             &show_demo_window); // Edit bools storing our window
                                                 // open/close state
-
-            ImGui::Checkbox("Camera Window",
-                            &show_camera_window); // Edit bools storing our
-                                                  // window open/close state
-
             ImGui::Checkbox("Another Window", &show_another_window);
 
             ImGui::SliderFloat(
@@ -263,20 +236,6 @@ int main(int, char**) {
             ImGui::Text("Hello from another window!");
             if (ImGui::Button("Close Me"))
                 show_another_window = false;
-            ImGui::End();
-        }
-
-        if (show_camera_window) {
-            ImGui::Begin("Camera Window", &show_camera_window);
-            if (ImGui::Combo("Devices", &item_current_idx, items.data(),
-                             items.size())) {
-                camera.deactivate();
-                camera = camera_manager[item_current_idx];
-            }
-            if (ImGui::Button("capture frame")) {
-                camera.activate();
-                camera.saveFrame(L"filefrombutton.jpg");
-            }
             ImGui::End();
         }
 
@@ -318,8 +277,10 @@ int main(int, char**) {
         g_pd3dCommandQueue->ExecuteCommandLists(
             1, (ID3D12CommandList* const*)&g_pd3dCommandList);
 
-        g_pSwapChain->Present(1, 0); // Present with vsync
-        // g_pSwapChain->Present(0, 0); // Present without vsync
+        // Present
+        HRESULT hr = g_pSwapChain->Present(1, 0); // Present with vsync
+        // HRESULT hr = g_pSwapChain->Present(0, 0); // Present without vsync
+        g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
 
         UINT64 fenceValue = g_fenceLastSignaledValue + 1;
         g_pd3dCommandQueue->Signal(g_fence, fenceValue);
